@@ -221,11 +221,13 @@ def plot_comparison2(img1, img2, location, patch_size=4, sigma=2, t0=0.4, k=0.7)
         axes[1, 0].plot(histr, color=col)
         axes[1, 1].plot(histJ, color=col)
         axes[1, 2].plot(histr2, color=col)
+    
+    plt.suptitle(f"Parameters : sigma={sigma}, t0={t0}, k={k}")
 
     return None
 
 
-def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigma=2, t0=0.4, k=0.7):
+def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigma=2, t0=0.4, k=0.7, steps=False, comparison=False):
     """
     Function that plots the different steps of the algorithm, and compares the result with an image without haze
 
@@ -283,10 +285,12 @@ def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigm
         # Normalize bands
         clean_img = clean_img / np.nanmax(clean_img, axis=(0, 1))
 
-    # # Plot steps of the algorithm
-    plot_steps(hazy_img, patch_size, sigma, t0, k)
+    if steps:
+        # # Plot steps of the algorithm
+        plot_steps(hazy_img, patch_size, sigma, t0, k)
 
-    plot_comparison2(hazy_img, clean_img, location, patch_size=patch_size, sigma=sigma, t0=t0, k=k)
+    if comparison:
+        plot_comparison2(hazy_img, clean_img, location, patch_size=patch_size, sigma=sigma, t0=t0, k=k)
 
     return None
 
