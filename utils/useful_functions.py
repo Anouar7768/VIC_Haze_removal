@@ -227,7 +227,84 @@ def plot_comparison2(img1, img2, location, patch_size=4, sigma=2, t0=0.4, k=0.7)
     return None
 
 
-def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigma=2, t0=0.4, k=0.7, steps=False, comparison=False):
+def plot_comparison_ms(img1, img2, location, patch_size=4, sigma=3, t0=0.5, k=1):
+    b = img1.shape[-1] - 1
+
+    # Compute restored radiance
+    J = dehazing(img1, patch_size, sigma, t0, k)
+    # Normalization
+    J = J / np.nanmax(J, axis=(0, 1))
+
+    # Print original image vs result
+    fig, axes = plt.subplots(6, b, figsize=(30, 15))
+    color = ['b', 'g', 'r', 'c', 'm', 'y', 'tab:orange', 'tab:purple','tab:olive','tab:brown']
+    bands = ["B2 (blue)", "B3 (green)", "B4 (red)", "B5 (red edge)", "B6 (red edge)", "B7 (red edge)", "B8 (nir)", "B8A (nir)", "B11 (swir)", "B12 (swir)"]
+    y_labels = ["Original", "Restored", "Haze free", "Original hist.", "Resotred hist.", "Haze free hist."]
+
+    for i in range(b):
+        axes[0, i].imshow(img1[:,:,i], cmap='gray')
+        axes[1, i].imshow(J[:,:,i], cmap='gray')
+        axes[2, i].imshow(img2[:,:,i], cmap='gray')
+        axes[0, i].set_title(bands[i])
+        # axes[1, i].set_title("Restored radiance")
+        # axes[2, i].set_title("Haze free channel at a close date")
+        
+        for j in range(6):
+            if j >0 :
+                axes[j,i].get_xaxis().set_visible(False)
+            if i > 0:
+                axes[j,i].get_yaxis().set_visible(False)
+
+        histr = cv2.calcHist([(img1 * 255).astype(np.uint16)], [i], None, [256], [0, 256])
+        histr2 = cv2.calcHist([(img2 * 255).astype(np.uint16)], [i], None, [256], [0, 256])
+        histJ = cv2.calcHist([(J * 255).astype(np.uint16)], [i], None, [256], [0, 256])
+        axes[3, i].plot(histr, color=color[i])
+        axes[4, i].plot(histJ, color=color[i])
+        axes[5, i].plot(histr2, color=color[i])
+    
+    for j in range(6):
+        axes[j,0].set_ylabel(y_labels[j])
+
+    plt.suptitle(f"Parameters : sigma={sigma}, t0={t0}, k={k}")
+
+    return None
+
+
+def plot_comparison_ndvi(img1, img2, location, patch_size=4, sigma=3, t0=0.6, k=1.5):
+    # Compute restored radiance
+    J = dehazing(img1, patch_size, sigma, t0, k)
+    # Normalization
+    J = J / np.nanmax(J, axis=(0, 1))
+
+    restored_ndvi = (J[0] - J[1]) / (J[0] + J[1])
+    hazy_ndvi = (img1[0] - img1[1]) / (img1[0] + img1[1])
+    original_ndvi = (img2[0] - img2[1]) / (img2[0] + img2[1])
+
+    # Print original image vs result
+    fig, axes = plt.subplots(2, 3, figsize=(20, 10))
+    axes[0, 0].imshow(img1, cmap='gray')
+    axes[0, 0].set_title(f"Original NDVI hazy image - {location}")
+    axes[0, 1].imshow(J)
+    axes[0, 1].set_title("Restored scene NDVI")
+    axes[0, 2].imshow(img2)
+    axes[0, 2].set_title("NDVI without haze at a close date")
+
+    color = ('g')
+
+    for i, col in enumerate(color):
+        histr = cv2.calcHist([(img1 * 255).astype(np.uint16)], [i], None, [256], [0, 256])
+        histr2 = cv2.calcHist([(img2 * 255).astype(np.uint16)], [i], None, [256], [0, 256])
+        histJ = cv2.calcHist([(J * 255).astype(np.uint16)], [i], None, [256], [0, 256])
+        axes[1, 0].plot(histr, color=col)
+        axes[1, 1].plot(histJ, color=col)
+        axes[1, 2].plot(histr2, color=col)
+    
+    plt.suptitle(f"Parameters : sigma={sigma}, t0={t0}, k={k}")
+
+    return None
+
+
+def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigma=2, t0=0.4, k=0.7, bands=[2,1,0], steps=False, comparison=False):
     """
     Function that plots the different steps of the algorithm, and compares the result with an image without haze
 
@@ -264,7 +341,7 @@ def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigm
         # print(input_img.shape)
 
         # Extract rgb bands
-        hazy_img = input_img[:, :, [2, 1, 0]]
+        hazy_img = input_img[:, :, bands]
         # print(np.isnan(hazy_img).sum())
         hazy_img[np.isnan(hazy_img)] = np.nanmean(hazy_img)
 
@@ -280,7 +357,7 @@ def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigm
         expected_img = np.moveaxis(expected_img, source=0, destination=-1)
         # print(expected_img.shape)
         # Extract rgb bands
-        clean_img = expected_img[:, :, [2, 1, 0]]
+        clean_img = expected_img[:, :, bands]
 
         # Normalize bands
         clean_img = clean_img / np.nanmax(clean_img, axis=(0, 1))
@@ -291,6 +368,118 @@ def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigm
 
     if comparison:
         plot_comparison2(hazy_img, clean_img, location, patch_size=patch_size, sigma=sigma, t0=t0, k=k)
+
+    return None
+
+
+def plot_results_ndvi(input_img, expected_img, location, patch_size=4, sigma=3, t0=0.6, k=1.5, bands=[3,2,1]):
+    """
+    Function that plots the different steps of the algorithm, and compares the result with an image without haze
+
+    Inputs:
+
+    input_img:       path of the original image, with haze
+    expected_img:    path of an image of the same place, without haze
+    img_type:        type of the image : 'raster' or 'rgb'
+    location:        location of the satellite image
+
+    Outputs:
+
+    None
+
+    """
+
+
+    # Import array from raster (tif) file
+    with rasterio.open(input_img) as src:
+        input_img = src.read()
+
+    # Set 0 values to nan to ignore them afterwards
+    input_img = np.where(input_img == 0, np.nan, input_img)
+
+    # Transpose to get an (.,.,10) image with rgb bands
+    input_img = np.moveaxis(input_img, source=0, destination=-1)
+    # print(input_img.shape)
+
+    # Extract rgb bands
+    hazy_img = input_img[:, :, bands]
+    # print(np.isnan(hazy_img).sum())
+    hazy_img[np.isnan(hazy_img)] = np.nanmean(hazy_img)
+
+    # Normalize bands
+    hazy_img = hazy_img / np.nanmax(hazy_img, axis=(0, 1))
+
+    # Import array from raster (tif) file
+    with rasterio.open(expected_img) as src:
+        expected_img = src.read()
+    # Set 0 values to nan to ignore them afterwards
+    expected_img = np.where(expected_img == 0, np.nan, expected_img)
+    # Transpose to get an (.,.,10) image with rgb bands
+    expected_img = np.moveaxis(expected_img, source=0, destination=-1)
+    # print(expected_img.shape)
+    # Extract rgb bands
+    clean_img = expected_img[:, :, bands]
+
+    # Normalize bands
+    clean_img = clean_img / np.nanmax(clean_img, axis=(0, 1))
+
+    plot_comparison_ndvi(hazy_img, clean_img, location, patch_size=patch_size, sigma=sigma, t0=t0, k=k)
+
+    return None
+
+
+def plot_results_ms(input_img, expected_img, location, patch_size=4, sigma=3, t0=0.6, k=1.5):
+    """
+    Function that plots the different steps of the algorithm, and compares the result with an image without haze
+
+    Inputs:
+
+    input_img:       path of the original image, with haze
+    expected_img:    path of an image of the same place, without haze
+    img_type:        type of the image : 'raster' or 'rgb'
+    location:        location of the satellite image
+
+    Outputs:
+
+    None
+
+    """
+
+
+    # Import array from raster (tif) file
+    with rasterio.open(input_img) as src:
+        input_img = src.read()
+
+    # Set 0 values to nan to ignore them afterwards
+    input_img = np.where(input_img == 0, np.nan, input_img)
+
+    # Transpose to get an (.,.,10) image with rgb bands
+    hazy_img = np.moveaxis(input_img, source=0, destination=-1)
+    # print(input_img.shape)
+
+    # Extract rgb bands
+    # hazy_img = input_img.copy()
+    # print(np.isnan(hazy_img).sum())
+    hazy_img[np.isnan(hazy_img)] = np.nanmean(hazy_img)
+
+    # Normalize bands
+    hazy_img = hazy_img / np.nanmax(hazy_img, axis=(0, 1))
+
+    # Import array from raster (tif) file
+    with rasterio.open(expected_img) as src:
+        clean_img = src.read()
+    # Set 0 values to nan to ignore them afterwards
+    clean_img = np.where(clean_img == 0, np.nan, clean_img)
+    # Transpose to get an (.,.,10) image with rgb bands
+    clean_img = np.moveaxis(clean_img, source=0, destination=-1)
+    # print(expected_img.shape)
+    # Extract rgb bands
+    # clean_img = expected_img[:, :, bands]
+
+    # Normalize bands
+    clean_img = clean_img / np.nanmax(clean_img, axis=(0, 1))
+
+    plot_comparison_ms(hazy_img, clean_img, location, patch_size=patch_size, sigma=sigma, t0=t0, k=k)
 
     return None
 
