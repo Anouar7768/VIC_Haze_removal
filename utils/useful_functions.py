@@ -174,6 +174,39 @@ def plot_steps(rgb, patch_size=4, sigma=2, t0=0.4, k=0.7):
     axes[5].set_title("Restored scene radiance")
     plt.suptitle("Different steps of the algorithm", y=0.7)
 
+def plot_steps_ms(img, patch_size=4, sigma=2, t0=0.4, k=0.7):
+    # Dark channel prior
+    dark_channel_ms = dark_channel_prior(img, patch_size)
+    # Global atmospheric light
+    A = global_atmospheric_light(img, dark_channel_ms)
+    # print(A)
+    # Normalization
+    img_n = normalize(img, A)
+    # Atmospheric veil
+    V = atmospheric_veil(img_n, sigma=sigma)
+    # Transmission
+    t = transmission(V)
+    # Restored scene radiance
+    J = restore_radiance(img, A, V, t, t0, k)
+    # Normalization
+    J = J / np.nanmax(J, axis=(0, 1))
+
+    # Plot the different steps
+    fig, axes = plt.subplots(1, 6, figsize=(20, 10))
+    axes[0].imshow(img[:,:,[0,1,2]])
+    axes[0].set_title("Original rgb image")
+    axes[1].imshow(dark_channel_ms, cmap='gray')
+    axes[1].set_title("Darkchannel prior")
+    axes[2].imshow(img_n[:,:,[0,1,2]])
+    axes[2].set_title("Normalized image")
+    axes[3].imshow(V, cmap='gray')
+    axes[3].set_title("Atmospheric veil")
+    axes[4].imshow(t, cmap='gray')
+    axes[4].set_title("Transmission")
+    axes[5].imshow(J[:,:,[0,1,2]])
+    axes[5].set_title("Restored scene radiance")
+    plt.suptitle("Different steps of the algorithm", y=0.7)
+
 
 def plot_comparison(img, patch_size=4, sigma=2, t0=0.4, k=0.7):
     # Compute resotred radiance
@@ -249,15 +282,15 @@ def plot_comparison_ms(img1, img2, location, patch_size=4, sigma=3, t0=0.5, k=1)
         # axes[1, i].set_title("Restored radiance")
         # axes[2, i].set_title("Haze free channel at a close date")
         
-        for j in range(6):
+        for j in range(3):
             if j >0 :
                 axes[j,i].get_xaxis().set_visible(False)
             if i > 0:
                 axes[j,i].get_yaxis().set_visible(False)
 
         histr = cv2.calcHist([(img1 * 255).astype(np.uint16)], [i], None, [256], [0, 256])
-        histr2 = cv2.calcHist([(img2 * 255).astype(np.uint16)], [i], None, [256], [0, 256])
         histJ = cv2.calcHist([(J * 255).astype(np.uint16)], [i], None, [256], [0, 256])
+        histr2 = cv2.calcHist([(img2 * 255).astype(np.uint16)], [i], None, [256], [0, 256])
         axes[3, i].plot(histr, color=color[i])
         axes[4, i].plot(histJ, color=color[i])
         axes[5, i].plot(histr2, color=color[i])
@@ -333,6 +366,9 @@ def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigm
         with rasterio.open(input_img) as src:
             input_img = src.read()
 
+        # Discard the SCL band
+        input_img = input_img[:-1, :, :]
+
         # Set 0 values to nan to ignore them afterwards
         input_img = np.where(input_img == 0, np.nan, input_img)
 
@@ -351,6 +387,8 @@ def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigm
         # Import array from raster (tif) file
         with rasterio.open(expected_img) as src:
             expected_img = src.read()
+        #Discard the SCL band
+        expected_img = expected_img[:-1, :, :]
         # Set 0 values to nan to ignore them afterwards
         expected_img = np.where(expected_img == 0, np.nan, expected_img)
         # Transpose to get an (.,.,10) image with rgb bands
@@ -394,6 +432,9 @@ def plot_results_ndvi(input_img, expected_img, location, patch_size=4, sigma=3, 
     with rasterio.open(input_img) as src:
         input_img = src.read()
 
+    # Discard the SCL band
+    input_img = input_img[:-1, :, :]
+
     # Set 0 values to nan to ignore them afterwards
     input_img = np.where(input_img == 0, np.nan, input_img)
 
@@ -412,6 +453,8 @@ def plot_results_ndvi(input_img, expected_img, location, patch_size=4, sigma=3, 
     # Import array from raster (tif) file
     with rasterio.open(expected_img) as src:
         expected_img = src.read()
+    #Discard the SCL band
+    expected_img = expected_img[:-1, :, :]
     # Set 0 values to nan to ignore them afterwards
     expected_img = np.where(expected_img == 0, np.nan, expected_img)
     # Transpose to get an (.,.,10) image with rgb bands
@@ -450,6 +493,9 @@ def plot_results_ms(input_img, expected_img, location, patch_size=4, sigma=3, t0
     with rasterio.open(input_img) as src:
         input_img = src.read()
 
+    # Discard the SCL band
+    input_img = input_img[:-1, :, :]
+
     # Set 0 values to nan to ignore them afterwards
     input_img = np.where(input_img == 0, np.nan, input_img)
 
@@ -468,13 +514,12 @@ def plot_results_ms(input_img, expected_img, location, patch_size=4, sigma=3, t0
     # Import array from raster (tif) file
     with rasterio.open(expected_img) as src:
         clean_img = src.read()
+    #Discard the SCL band
+    clean_img = clean_img[:-1, :, :]
     # Set 0 values to nan to ignore them afterwards
     clean_img = np.where(clean_img == 0, np.nan, clean_img)
     # Transpose to get an (.,.,10) image with rgb bands
     clean_img = np.moveaxis(clean_img, source=0, destination=-1)
-    # print(expected_img.shape)
-    # Extract rgb bands
-    # clean_img = expected_img[:, :, bands]
 
     # Normalize bands
     clean_img = clean_img / np.nanmax(clean_img, axis=(0, 1))
@@ -490,6 +535,9 @@ def plot_img_vs_histogram(img_name, location, img_type):
         # Import array from raster (tif) file
         with rasterio.open(img_name) as src:
             img = src.read()
+
+        # Discard the SCL band
+        img = img[:-1, :, :]
 
         # Set 0 values to nan to ignore them afterwards
         img = np.where(img == 0, np.nan, img)
