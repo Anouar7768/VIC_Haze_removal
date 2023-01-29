@@ -529,7 +529,7 @@ def plot_results_ms(input_img, expected_img, location, patch_size=4, sigma=3, t0
     return None
 
 
-def plot_img_vs_histogram(img_name, location, img_type):
+def extract_img(img_name, img_type):
     if img_type == "raster":
 
         # Import array from raster (tif) file
@@ -558,15 +558,4 @@ def plot_img_vs_histogram(img_name, location, img_type):
 
         rgb = plt.imread(img_name)
 
-    colors = ('b', 'g', 'r')
-
-    fig, axes = plt.subplots(1, 2, figsize=(20, 10))
-
-    axes[0].imshow(rgb)
-    axes[0].set_title(f"Original rgb image - {location}")
-
-    for i, col in enumerate(colors):
-        histr = cv2.calcHist([(rgb * 255).astype(np.uint16)], [i], None, [256], [0, 256])
-        axes[1].plot(histr, color=col)
-        axes[1].set_title(f"Histogram of rgb color bands")
-    return None
+    return rgb
