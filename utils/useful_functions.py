@@ -49,7 +49,6 @@ def global_atmospheric_light(img, img_dark, patch_size=4):
     xk = np.nanargmax(img_dark)
     xk = np.unravel_index(xk, img_dark.shape)
 
-    # A = img[xk[1], xk[0]]
     A = img[xk]
 
     return A
@@ -146,7 +145,6 @@ def plot_steps(rgb, patch_size=4, sigma=2, t0=0.4, k=0.7):
     dark_channel_rgb = dark_channel_prior(rgb, patch_size)
     # Global atmospheric light
     A = global_atmospheric_light(rgb, dark_channel_rgb)
-    # print(A)
     # Normalization
     img_n = normalize(rgb, A)
     # Atmospheric veil
@@ -179,7 +177,6 @@ def plot_steps_ms(img, patch_size=4, sigma=2, t0=0.4, k=0.7):
     dark_channel_ms = dark_channel_prior(img, patch_size)
     # Global atmospheric light
     A = global_atmospheric_light(img, dark_channel_ms)
-    # print(A)
     # Normalization
     img_n = normalize(img, A)
     # Atmospheric veil
@@ -196,7 +193,7 @@ def plot_steps_ms(img, patch_size=4, sigma=2, t0=0.4, k=0.7):
     axes[0].imshow(img[:,:,[0,1,2]])
     axes[0].set_title("Original rgb image")
     axes[1].imshow(dark_channel_ms, cmap='gray')
-    axes[1].set_title("Darkchannel prior")
+    axes[1].set_title("Dark channel prior")
     axes[2].imshow(img_n[:,:,[0,1,2]])
     axes[2].set_title("Normalized image")
     axes[3].imshow(V, cmap='gray')
@@ -279,8 +276,6 @@ def plot_comparison_ms(img1, img2, location, patch_size=4, sigma=3, t0=0.5, k=1)
         axes[1, i].imshow(J[:,:,i], cmap='gray')
         axes[2, i].imshow(img2[:,:,i], cmap='gray')
         axes[0, i].set_title(bands[i])
-        # axes[1, i].set_title("Restored radiance")
-        # axes[2, i].set_title("Haze free channel at a close date")
         
         for j in range(3):
             if j >0 :
@@ -302,39 +297,6 @@ def plot_comparison_ms(img1, img2, location, patch_size=4, sigma=3, t0=0.5, k=1)
 
     return None
 
-
-def plot_comparison_ndvi(img1, img2, location, patch_size=4, sigma=3, t0=0.6, k=1.5):
-    # Compute restored radiance
-    J = dehazing(img1, patch_size, sigma, t0, k)
-    # Normalization
-    J = J / np.nanmax(J, axis=(0, 1))
-
-    restored_ndvi = (J[0] - J[1]) / (J[0] + J[1])
-    hazy_ndvi = (img1[0] - img1[1]) / (img1[0] + img1[1])
-    original_ndvi = (img2[0] - img2[1]) / (img2[0] + img2[1])
-
-    # Print original image vs result
-    fig, axes = plt.subplots(2, 3, figsize=(20, 10))
-    axes[0, 0].imshow(img1, cmap='gray')
-    axes[0, 0].set_title(f"Original NDVI hazy image - {location}")
-    axes[0, 1].imshow(J)
-    axes[0, 1].set_title("Restored scene NDVI")
-    axes[0, 2].imshow(img2)
-    axes[0, 2].set_title("NDVI without haze at a close date")
-
-    color = ('g')
-
-    for i, col in enumerate(color):
-        histr = cv2.calcHist([(img1 * 255).astype(np.uint16)], [i], None, [256], [0, 256])
-        histr2 = cv2.calcHist([(img2 * 255).astype(np.uint16)], [i], None, [256], [0, 256])
-        histJ = cv2.calcHist([(J * 255).astype(np.uint16)], [i], None, [256], [0, 256])
-        axes[1, 0].plot(histr, color=col)
-        axes[1, 1].plot(histJ, color=col)
-        axes[1, 2].plot(histr2, color=col)
-    
-    plt.suptitle(f"Parameters : sigma={sigma}, t0={t0}, k={k}")
-
-    return None
 
 
 def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigma=2, t0=0.4, k=0.7, bands=[2,1,0], steps=False, comparison=False):
@@ -374,11 +336,9 @@ def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigm
 
         # Transpose to get an (.,.,10) image with rgb bands
         input_img = np.moveaxis(input_img, source=0, destination=-1)
-        # print(input_img.shape)
 
         # Extract rgb bands
         hazy_img = input_img[:, :, bands]
-        # print(np.isnan(hazy_img).sum())
         hazy_img[np.isnan(hazy_img)] = np.nanmean(hazy_img)
 
         # Normalize bands
@@ -393,7 +353,6 @@ def plot_results(input_img, expected_img, img_type, location, patch_size=4, sigm
         expected_img = np.where(expected_img == 0, np.nan, expected_img)
         # Transpose to get an (.,.,10) image with rgb bands
         expected_img = np.moveaxis(expected_img, source=0, destination=-1)
-        # print(expected_img.shape)
         # Extract rgb bands
         clean_img = expected_img[:, :, bands]
 
@@ -440,7 +399,6 @@ def plot_results_ndvi(input_img, expected_img, location, patch_size=4, sigma=3, 
 
     # Transpose to get an (.,.,10) image with rgb bands
     input_img = np.moveaxis(input_img, source=0, destination=-1)
-    # print(input_img.shape)
 
     # Extract rgb bands
     hazy_img = input_img[:, :, bands]
@@ -459,7 +417,6 @@ def plot_results_ndvi(input_img, expected_img, location, patch_size=4, sigma=3, 
     expected_img = np.where(expected_img == 0, np.nan, expected_img)
     # Transpose to get an (.,.,10) image with rgb bands
     expected_img = np.moveaxis(expected_img, source=0, destination=-1)
-    # print(expected_img.shape)
     # Extract rgb bands
     clean_img = expected_img[:, :, bands]
 
@@ -501,11 +458,8 @@ def plot_results_ms(input_img, expected_img, location, patch_size=4, sigma=3, t0
 
     # Transpose to get an (.,.,10) image with rgb bands
     hazy_img = np.moveaxis(input_img, source=0, destination=-1)
-    # print(input_img.shape)
 
     # Extract rgb bands
-    # hazy_img = input_img.copy()
-    # print(np.isnan(hazy_img).sum())
     hazy_img[np.isnan(hazy_img)] = np.nanmean(hazy_img)
 
     # Normalize bands
@@ -551,7 +505,6 @@ def extract_img(img_name, img_type):
         rgb = img[:, :, [2, 1, 0]]
 
         # Normalize bands
-        # rgb = (rgb-np.nanmin(rgb, axis=(0,1)))/(np.nanmax(rgb, axis=(0,1)))
         rgb = rgb / (np.nanmax(rgb, axis=(0, 1)))
 
     elif img_type == "rgb":

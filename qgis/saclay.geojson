@@ -1,8 +1,0 @@
-{
-"type": "FeatureCollection",
-"name": "saclay",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "id": 1 }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 2.157469639983579, 48.704473487203785 ], [ 2.157469639983579, 48.724084870906168 ], [ 2.195178085917771, 48.724084870906168 ], [ 2.195178085917771, 48.704473487203785 ], [ 2.157469639983579, 48.704473487203785 ] ] ] ] } }
-]
-}
